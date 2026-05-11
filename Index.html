@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OptiFiscal — Simulador Integral de Optimización Fiscal</title>
+<style>
+  :root {
+    --color-primary: #1F4E78;
+    --color-secondary: #2E75B6;
+    --color-accent: #C00000;
+    --color-success: #548235;
+    --color-warning: #BF8F00;
+    --color-bg: #F5F7FA;
+    --color-input: #FFF2CC;
+    --color-good: #C6EFCE;
+    --color-bad: #FFC7CE;
+    --color-recom: #E2EFDA;
+    --color-border: #D9E1F2;
+    --color-text: #2C3E50;
+    --color-text-light: #555;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+    --radius: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+    line-height: 1.5;
+    padding: 0;
+  }
+
+  .header {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    color: white;
+    padding: 24px 32px;
+    box-shadow: var(--shadow-md);
+  }
+  .header h1 { font-size: 24px; margin-bottom: 4px; }
+  .header p { opacity: 0.92; font-size: 14px; }
+  .header .badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.18);
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    margin-top: 10px;
+    letter-spacing: 0.5px;
+  }
+
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px 16px;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 980px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: white;
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border);
+  }
+  .card h2 {
+    font-size: 15px;
+    color: var(--color-primary);
+    border-bottom: 2px solid var(--color-secondary);
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .field {
+    margin-bottom: 12px;
+  }
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 4px;
+  }
+  .field .hint {
+    font-size: 10.5px;
+    color: var(--color-text-light);
+    margin-top: 2px;
+    font-style: italic;
+  }
+  .field input, .field select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1.5px solid var(--color-border);
+    border-radius: 5px;
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--color-input);
+    color: var(--color-text);
+    font-weight: 600;
+    transition: border-color 0.15s;
+  }
+  .field input:focus, .field select:focus {
+    outline: none;
+    border-color: var(--color-secondary);
+    box-shadow: 0 0 0 3px rgba(46, 117, 182, 0.15);
+  }
+
+  .scenarios {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .scenario {
+    background: white;
+    border-radius: var(--radius);
+    padding: 14px;
+    border: 2px solid var(--color-border);
+    transition: all 0.2s;
+    position: relative;
+  }
+  .scenario.optimal {
+    border-color: var(--color-success);
+    background: var(--color-recom);
+    box-shadow: 0 0 0 3px rgba(84, 130, 53, 0.18);
+  }
+  .scenario.worst {
+    border-color: var(--color-accent);
+    opacity: 0.85;
+  }
+  .scenario .name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .scenario .star {
+    font-size: 16px;
+    color: var(--color-success);
+  }
+  .scenario .row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.5px;
+    padding: 3px 0;
+    border-bottom: 1px dashed #E0E5EB;
+  }
+  .scenario .row:last-of-type { border-bottom: none; }
+  .scenario .row .label { color: var(--color-text-light); }
+  .scenario .row .value { font-weight: 600; }
+  .scenario .total {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 2px solid var(--color-primary);
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-accent);
+  }
+  .scenario.optimal .total { color: var(--color-success); }
+
+  .recommendation {
+    background: linear-gradient(135deg, var(--color-recom), #DAEDD5);
+    border: 2px solid var(--color-success);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .recommendation .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--color-success);
+    margin-bottom: 6px;
+    font-weight: 700;
+  }
+  .recommendation .name {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--color-primary);
+    margin-bottom: 12px;
+  }
+  .recommendation .savings {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .recommendation .stat {
+    background: white;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+  }
+  .recommendation .stat-label {
+    font-size: 10px;
+    color: var(--color-text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .recommendation .stat-value {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--color-primary);
+    margin-top: 2px;
+  }
+  .recommendation .stat-value.highlight {
+    color: var(--color-success);
+    font-size: 24px;
+  }
+
+  .rules {
+    margin-top: 16px;
+  }
+  .rule {
+    background: white;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    border-left: 4px solid var(--color-secondary);
+    border-radius: 5px;
+    font-size: 13px;
+    box-shadow: var(--shadow-sm);
+    display: none;
+  }
+  .rule.show { display: block; animation: slideIn 0.3s; }
+  .rule.warning { border-left-color: var(--color-warning); background: #FEF6E3; }
+  .rule.danger { border-left-color: var(--color-accent); background: #FEE; }
+  .rule .icon {
+    display: inline-block;
+    margin-right: 6px;
+    font-weight: bold;
+  }
+  .rule .ref {
+    display: block;
+    font-size: 11px;
+    color: var(--color-text-light);
+    margin-top: 3px;
+    font-style: italic;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .formula-info {
+    background: #FFF8E1;
+    border: 1px dashed var(--color-warning);
+    border-radius: 5px;
+    padding: 10px;
+    font-size: 11.5px;
+    color: var(--color-text-light);
+    margin-top: 12px;
+    line-height: 1.5;
+  }
+  .formula-info strong { color: var(--color-warning); }
+
+  .footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--color-text-light);
+    font-size: 12px;
+    border-top: 1px solid var(--color-border);
+    margin-top: 32px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 2px solid var(--color-border);
+  }
+  .tab {
+    padding: 8px 16px;
+    background: transparent;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-light);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.15s;
+  }
+  .tab:hover { color: var(--color-primary); }
+  .tab.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  table.detail {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    margin-top: 8px;
+  }
+  table.detail th, table.detail td {
+    padding: 7px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+  }
+  table.detail th {
+    background: var(--color-border);
+    color: var(--color-primary);
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  table.detail td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.detail tr:hover { background: #FAFBFD; }
+
+  .preset-btns {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px dashed var(--color-border);
+  }
+  .preset-btn {
+    padding: 5px 11px;
+    background: white;
+    border: 1.5px solid var(--color-secondary);
+    border-radius: 14px;
+    font-size: 11.5px;
+    cursor: pointer;
+    color: var(--color-secondary);
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+  .preset-btn:hover {
+    background: var(--color-secondary);
+    color: white;
+  }
+
+  .print-btn {
+    margin-left: auto;
+    padding: 7px 14px;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .print-btn:hover { background: var(--color-secondary); }
+
+  @media print {
+    body { background: white; }
+    .header { background: var(--color-primary) !important; -webkit-print-color-adjust: exact; }
+    .field input, .field select { background: white !important; }
+    .preset-btns, .print-btn, .tabs { display: none; }
+    .tab-content { display: block !important; }
+    .layout { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>OptiFiscal — Simulador Integral de Optimización Fiscal</h1>
+  <p>Herramienta de decisión para la elección de estructura jurídico-fiscal óptima · Ejercicio 2026</p>
+  <span class="badge">Versión web 1.0 · Cataluña / Madrid / Andalucía / Valencia</span>
+</div>
+
+<div class="container">
+
+<div class="preset-btns">
+  <span style="font-size: 12px; color: var(--color-text-light); align-self: center; margin-right: 6px;">Casos predefinidos:</span>
+  <button class="preset-btn" onclick="loadPreset('default')">Por defecto</button>
+  <button class="preset-btn" onclick="loadPreset('profesional')">Profesional IT</button>
+  <button class="preset-btn" onclick="loadPreset('inmobiliario')">Patrimonio inmobiliario</button>
+  <button class="preset-btn" onclick="loadPreset('empresa')">Empresa familiar</button>
+  <button class="preset-btn" onclick="loadPreset('crisis')">Grupo en crisis</button>
+  <button class="print-btn" onclick="window.print()">🖨 Imprimir / PDF</button>
+</div>
+
+<div class="layout">
+
+  <!-- PANEL DE ENTRADA -->
+  <div class="card">
+    <h2>📋 Datos del cliente</h2>
+
+    <div class="field">
+      <label for="rendimientos">Rendimientos brutos anuales (€)</label>
+      <input type="number" id="rendimientos" value="90000" min="0" step="1000" oninput="calcular()">
+      <div class="hint">Ingresos totales antes de gastos</div>
+    </div>
+
+    <div class="field">
+      <label for="gastos">Gastos deducibles anuales (€)</label>
+      <input type="number" id="gastos" value="18000" min="0" step="1000" oninput="calcular()">
+      <div class="hint">Gastos profesionales o de la actividad</div>
+    </div>
+
+    <div class="field">
+      <label for="ccaa">Comunidad Autónoma</label>
+      <select id="ccaa" onchange="calcular()">
+        <option value="1">Madrid</option>
+        <option value="2" selected>Cataluña</option>
+        <option value="3">Andalucía</option>
+        <option value="4">Comunidad Valenciana</option>
+      </select>
+      <div class="hint">Determina la escala IRPF y bonificaciones autonómicas</div>
+    </div>
+
+    <div class="field">
+      <label for="tipoActividad">Tipo de actividad</label>
+      <select id="tipoActividad" onchange="calcular()">
+        <option value="1">Profesional / Servicios</option>
+        <option value="2">Arrendamiento inmobiliario</option>
+        <option value="3">Industrial / Comercial</option>
+      </select>
+      <div class="hint">Si es arrendamiento → activa el coste del empleado a JC</div>
+    </div>
+
+    <div class="field">
+      <label for="vivienda">¿Es vivienda habitual del inquilino?</label>
+      <select id="vivienda" onchange="calcular()">
+        <option value="0">No</option>
+        <option value="1">Sí — activa reducción 50% (art. 23.2 LIRPF)</option>
+      </select>
+      <div class="hint">Solo relevante para arrendamiento</div>
+    </div>
+
+    <div class="field">
+      <label for="reinvertir">¿Pretende reinvertir los beneficios?</label>
+      <select id="reinvertir" onchange="calcular()">
+        <option value="0">No — los reparte como dividendos</option>
+        <option value="1">Sí — diferimiento del IRPF</option>
+      </select>
+      <div class="hint">La reinversión evita la tributación de dividendos en sede del socio</div>
+    </div>
+
+    <div class="field">
+      <label for="edad">Edad del titular (años)</label>
+      <input type="number" id="edad" value="45" min="18" max="100" step="1" oninput="calcular()">
+      <div class="hint">Si ≥65 + relevo → recomendación de donación con reducción ISD</div>
+    </div>
+
+    <div class="field">
+      <label for="relevo">¿Hay relevo generacional previsto?</label>
+      <select id="relevo" onchange="calcular()">
+        <option value="0">No</option>
+        <option value="1">Sí — hijos preparados para el relevo</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="bin">¿Hay BIN pendientes a aprovechar?</label>
+      <select id="bin" onchange="calcular()">
+        <option value="0">No</option>
+        <option value="1">Sí — verificar régimen FEAC (art. 84 LIS)</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="socios">Nº de socios actuales o previstos</label>
+      <input type="number" id="socios" value="1" min="1" max="20" step="1" oninput="calcular()">
+      <div class="hint">Relevante para holdings y protocolo familiar</div>
+    </div>
+
+    <div class="formula-info">
+      <strong>📊 Algoritmo:</strong> calcula en paralelo el coste fiscal total (CFT) de los 4 escenarios y recomienda el de menor CFT, complementado con 7 reglas cualitativas basadas en normativa fiscal vigente 2026.
+    </div>
+  </div>
+
+  <!-- PANEL DE RESULTADOS -->
+  <div>
+
+    <!-- RECOMENDACIÓN -->
+    <div class="recommendation">
+      <div class="label">⭐ Estructura óptima recomendada</div>
+      <div class="name" id="recom-name">Calculando...</div>
+      <div class="savings">
+        <div class="stat">
+          <div class="stat-label">Coste fiscal mínimo</div>
+          <div class="stat-value" id="cft-min">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Coste fiscal peor</div>
+          <div class="stat-value" id="cft-max">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">% Ahorro</div>
+          <div class="stat-value highlight" id="ahorro-pct">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('escenarios', this)">📊 Escenarios</button>
+      <button class="tab" onclick="switchTab('reglas', this)">⚖️ Reglas legales</button>
+      <button class="tab" onclick="switchTab('detalle', this)">🔍 Detalle de cálculo</button>
+    </div>
+
+    <!-- TAB ESCENARIOS -->
+    <div class="tab-content active" id="tab-escenarios">
+      <div class="scenarios" id="scenarios-grid">
+        <!-- Renderizado dinámico -->
+      </div>
+    </div>
+
+    <!-- TAB REGLAS -->
+    <div class="tab-content" id="tab-reglas">
+      <div class="card">
+        <h2>⚖️ Recomendaciones cualitativas</h2>
+        <div class="rules" id="rules-list">
+          <!-- Reglas activadas dinámicamente -->
+        </div>
+        <div class="formula-info" id="no-rules-msg" style="display:none;">
+          No se han activado reglas cualitativas adicionales para este caso.
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB DETALLE -->
+    <div class="tab-content" id="tab-detalle">
+      <div class="card">
+        <h2>🔍 Trazabilidad de cálculos</h2>
+        <table class="detail" id="detail-table">
+          <thead>
+            <tr>
+              <th>Concepto</th>
+              <th class="num">PF</th>
+              <th class="num">Microempresa</th>
+              <th class="num">Holding</th>
+              <th class="num">General 25%</th>
+            </tr>
+          </thead>
+          <tbody id="detail-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer">
+  <p><strong>OptiFiscal</strong> — Trabajo Fin de Máster · Estilo APA-UOC</p>
+  <p style="margin-top: 6px;">Marco normativo: Ley 27/2014 LIS · Ley 35/2006 LIRPF · Ley 29/1987 LISD · Ley 19/1991 LIP · Ley 7/2024 · Doctrina DGT 2024-2025</p>
+  <p style="margin-top: 4px; font-size: 10.5px;">⚠ Esta herramienta es orientativa. La recomendación final debe ser refrendada por un profesional.</p>
+</div>
+
+</div>
+
+<script>
+// ============================================
+//  MOTOR DE CÁLCULO — OptiFiscal v1.0
+// ============================================
+
+// Escala IRPF consolidada Cataluña 2026 (estatal + autonómica)
+const ESCALA_IRPF_CAT = [
+  { limite: 12450,    tipo: 0.20  },
+  { limite: 17707.20, tipo: 0.24  },
+  { limite: 20200,    tipo: 0.26  },
+  { limite: 21000,    tipo: 0.29  },
+  { limite: 33007.20, tipo: 0.30  },
+  { limite: 35200,    tipo: 0.338 },
+  { limite: 53407.20, tipo: 0.373 },
+  { limite: 60000,    tipo: 0.40  },
+  { limite: 90000,    tipo: 0.44  },
+  { limite: 120000,   tipo: 0.46  },
+  { limite: 175000,   tipo: 0.47  },
+  { limite: 300000,   tipo: 0.48  },
+  { limite: Infinity, tipo: 0.50  }
+];
+
+// Escala genérica más favorable (Madrid, Andalucía, Valencia — aproximación)
+const ESCALA_IRPF_GEN = [
+  { limite: 12450,    tipo: 0.19 },
+  { limite: 20200,    tipo: 0.24 },
+  { limite: 35200,    tipo: 0.30 },
+  { limite: 60000,    tipo: 0.37 },
+  { limite: 300000,   tipo: 0.45 },
+  { limite: Infinity, tipo: 0.47 }
+];
+
+// Escala del ahorro (dividendos) 2026 — Ley 7/2024
+const ESCALA_AHORRO = [
+  { limite: 6000,     tipo: 0.19 },
+  { limite: 50000,    tipo: 0.21 },
+  { limite: 200000,   tipo: 0.23 },
+  { limite: 300000,   tipo: 0.27 },
+  { limite: Infinity, tipo: 0.30 }
+];
+
+const COSTE_EMPLEADO_JC = 28000;
+const NOMBRES_CCAA = { 1: 'Madrid', 2: 'Cataluña', 3: 'Andalucía', 4: 'Comunidad Valenciana' };
+
+/** Aplica una escala progresiva por tramos */
+function aplicarEscala(base, escala) {
+  if (base <= 0) return 0;
+  let cuota = 0;
+  let anterior = 0;
+  for (const tramo of escala) {
+    const trozo = Math.min(tramo.limite, base) - anterior;
+    if (trozo <= 0) break;
+    cuota += trozo * tramo.tipo;
+    anterior = tramo.limite;
+    if (base <= tramo.limite) break;
+  }
+  return cuota;
+}
+
+const fmt = v => v.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+const fmtPct = v => (v * 100).toFixed(2) + '%';
+
+/** Función principal de cálculo */
+function calcular() {
+  // Leer inputs
+  const r = parseFloat(document.getElementById('rendimientos').value) || 0;
+  const g = parseFloat(document.getElementById('gastos').value) || 0;
+  const ccaa = parseInt(document.getElementById('ccaa').value);
+  const tipoAct = parseInt(document.getElementById('tipoActividad').value);
+  const vivienda = parseInt(document.getElementById('vivienda').value);
+  const reinvertir = parseInt(document.getElementById('reinvertir').value);
+  const edad = parseInt(document.getElementById('edad').value) || 0;
+  const relevo = parseInt(document.getElementById('relevo').value);
+  const bin = parseInt(document.getElementById('bin').value);
+  const socios = parseInt(document.getElementById('socios').value) || 1;
+
+  const RN = r - g;
+  const escalaIRPF = (ccaa === 2) ? ESCALA_IRPF_CAT : ESCALA_IRPF_GEN;
+  const costeEmpleado = (tipoAct === 2) ? COSTE_EMPLEADO_JC : 0;
+
+  // ===== ESCENARIO 1: PERSONA FÍSICA =====
+  const reduccionViv = (tipoAct === 2 && vivienda === 1) ? 0.5 : 0;
+  const BL_pf = Math.max(0, RN * (1 - reduccionViv));
+  const cuota_pf = aplicarEscala(BL_pf, escalaIRPF);
+  const CFT_pf = cuota_pf;
+
+  // ===== ESCENARIO 2: SL MICROEMPRESA =====
+  const BI_micro = Math.max(0, RN - costeEmpleado);
+  let cuota_is_micro;
+  if (BI_micro <= 50000) {
+    cuota_is_micro = BI_micro * 0.17;
+  } else {
+    cuota_is_micro = 50000 * 0.17 + (BI_micro - 50000) * 0.20;
+  }
+  const disp_micro = Math.max(0, BI_micro - cuota_is_micro);
+  const irpf_div_micro = (reinvertir === 1) ? 0 : aplicarEscala(disp_micro, ESCALA_AHORRO);
+  const CFT_micro = cuota_is_micro + irpf_div_micro;
+
+  // ===== ESCENARIO 3: HOLDING + FILIAL =====
+  const BI_filial = Math.max(0, RN - costeEmpleado);
+  let cuota_is_filial;
+  if (BI_filial <= 50000) {
+    cuota_is_filial = BI_filial * 0.17;
+  } else {
+    cuota_is_filial = 50000 * 0.17 + (BI_filial - 50000) * 0.20;
+  }
+  const div_a_holding = Math.max(0, BI_filial - cuota_is_filial);
+  const cuota_is_holding = div_a_holding * 0.05 * 0.25;  // Art. 21.10 LIS
+  const total_corp_holding = cuota_is_filial + cuota_is_holding;
+  const disp_holding = div_a_holding - cuota_is_holding;
+  const irpf_div_holding = (reinvertir === 1) ? 0 : aplicarEscala(disp_holding, ESCALA_AHORRO);
+  const CFT_holding = total_corp_holding + irpf_div_holding;
+
+  // ===== ESCENARIO 4: SL GENERAL 25% =====
+  const BI_gen = Math.max(0, RN - costeEmpleado);
+  const cuota_is_gen = BI_gen * 0.25;
+  const disp_gen = Math.max(0, BI_gen - cuota_is_gen);
+  const irpf_div_gen = (reinvertir === 1) ? 0 : aplicarEscala(disp_gen, ESCALA_AHORRO);
+  const CFT_gen = cuota_is_gen + irpf_div_gen;
+
+  // ===== IDENTIFICAR ÓPTIMO =====
+  const escenarios = [
+    { id: 'pf',       nombre: 'Persona Física',         cuota: cuota_pf,            div: 0,                 cft: CFT_pf,      norma: 'Arts. 22, 23, 63 LIRPF' },
+    { id: 'micro',    nombre: 'SL Microempresa',         cuota: cuota_is_micro,      div: irpf_div_micro,    cft: CFT_micro,   norma: 'Art. 29.1 LIS (Ley 7/2024)' },
+    { id: 'holding',  nombre: 'Holding + Filial',        cuota: total_corp_holding,  div: irpf_div_holding,  cft: CFT_holding, norma: 'Arts. 21.1, 21.10 LIS' },
+    { id: 'general',  nombre: 'SL General 25%',          cuota: cuota_is_gen,        div: irpf_div_gen,      cft: CFT_gen,     norma: 'Art. 29.1 LIS' }
+  ];
+  const cftValues = escenarios.map(e => e.cft);
+  const cftMin = Math.min(...cftValues);
+  const cftMax = Math.max(...cftValues);
+  const optimo = escenarios.find(e => e.cft === cftMin);
+  const ahorroEur = cftMax - cftMin;
+  const ahorroPct = (cftMax > 0) ? ahorroEur / cftMax : 0;
+
+  // ===== ACTUALIZAR UI =====
+  document.getElementById('recom-name').textContent = optimo.nombre.toUpperCase();
+  document.getElementById('cft-min').textContent = fmt(cftMin);
+  document.getElementById('cft-max').textContent = fmt(cftMax);
+  document.getElementById('ahorro-pct').textContent = fmtPct(ahorroPct);
+
+  // Render escenarios
+  const grid = document.getElementById('scenarios-grid');
+  grid.innerHTML = '';
+  escenarios.forEach(esc => {
+    const tipoEfectivo = (RN > 0) ? esc.cft / RN : 0;
+    const isOptimal = esc.cft === cftMin;
+    const isWorst = esc.cft === cftMax && cftMin !== cftMax;
+    const card = document.createElement('div');
+    card.className = 'scenario' + (isOptimal ? ' optimal' : (isWorst ? ' worst' : ''));
+    card.innerHTML = `
+      <div class="name">
+        <span>${esc.nombre}</span>
+        ${isOptimal ? '<span class="star">★</span>' : ''}
+      </div>
+      <div class="row"><span class="label">Cuota IS/IRPF:</span><span class="value">${fmt(esc.cuota)}</span></div>
+      <div class="row"><span class="label">IRPF dividendos:</span><span class="value">${fmt(esc.div)}</span></div>
+      <div class="row"><span class="label">Tipo efectivo:</span><span class="value">${fmtPct(tipoEfectivo)}</span></div>
+      <div class="total"><span>TOTAL:</span><span>${fmt(esc.cft)}</span></div>
+      <div style="font-size: 10px; color: var(--color-text-light); margin-top: 6px; font-style: italic;">${esc.norma}</div>
+    `;
+    grid.appendChild(card);
+  });
+
+  // ===== REGLAS CUALITATIVAS =====
+  const reglas = [];
+  if (edad >= 65 && relevo === 1) {
+    reglas.push({
+      tipo: 'success',
+      icon: '✓',
+      texto: '<strong>Considerar DONACIÓN</strong> de participaciones con reducción del 95%-99% del ISD.',
+      ref: 'Art. 20.6 Ley 29/1987 LISD'
+    });
+  }
+  if (tipoAct === 2) {
+    reglas.push({
+      tipo: 'danger',
+      icon: '⚠',
+      texto: '<strong>Riesgo de PATRIMONIALIDAD</strong> (art. 5.2 LIS). Contratar empleado a jornada completa o gestión externalizada equivalente.',
+      ref: 'Art. 5.2 LIS + DGT V0090-24 + STS 14/07/2025'
+    });
+  }
+  if (bin === 1) {
+    reglas.push({
+      tipo: 'success',
+      icon: '✓',
+      texto: '<strong>Considerar régimen FEAC</strong> para fusión por absorción. Verificar limitación del art. 84.2 LIS.',
+      ref: 'Capítulo VII Título VII LIS (arts. 76-89) + DGT V2398-24'
+    });
+  }
+  if (reinvertir === 1) {
+    reglas.push({
+      tipo: 'success',
+      icon: '✓',
+      texto: '<strong>HOLDING óptima</strong>: diferimiento del IRPF + exención del 95% en dividendos intragrupo.',
+      ref: 'Art. 21 LIS (Ley 11/2020)'
+    });
+  }
+  if (ccaa === 2 && relevo === 1) {
+    reglas.push({
+      tipo: 'warning',
+      icon: '⚠',
+      texto: '<strong>Cataluña</strong> aplica bonificación ESCALONADA (20%-99%) en cuota — significativamente más cara que Madrid, Andalucía o Valencia para donaciones cuantiosas.',
+      ref: 'Art. 58 bis Ley 19/2010 (CAT)'
+    });
+  }
+  if (socios > 1 && optimo.id === 'holding') {
+    reglas.push({
+      tipo: 'success',
+      icon: '✓',
+      texto: '<strong>Implementar PROTOCOLO FAMILIAR + Pacto de socios</strong> para gobernanza intergeneracional.',
+      ref: 'RD 171/2007 + art. 1255 CC'
+    });
+  }
+  if (RN > 60000 && reinvertir === 1) {
+    reglas.push({
+      tipo: 'success',
+      icon: '✓',
+      texto: '<strong>Punto de cruce IRPF/IS superado</strong> — la estructura societaria con reinversión es fiscalmente más eficiente que la persona física.',
+      ref: 'Análisis curva de presión fiscal'
+    });
+  }
+
+  // Render reglas
+  const rulesList = document.getElementById('rules-list');
+  rulesList.innerHTML = '';
+  reglas.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'rule show ' + (r.tipo === 'warning' ? 'warning' : (r.tipo === 'danger' ? 'danger' : ''));
+    div.innerHTML = `<span class="icon">${r.icon}</span> ${r.texto}<span class="ref">📚 ${r.ref}</span>`;
+    rulesList.appendChild(div);
+  });
+  document.getElementById('no-rules-msg').style.display = reglas.length === 0 ? 'block' : 'none';
+
+  // ===== TABLA DETALLE =====
+  const tbody = document.getElementById('detail-tbody');
+  const filas = [
+    ['Rendimiento neto base',            RN, RN, RN, RN],
+    ['Base liquidable / BI',             BL_pf, BI_micro, BI_filial, BI_gen],
+    ['Reducción vivienda (50%)',         RN - BL_pf, '—', '—', '—'],
+    ['Coste empleado JC (si arrend.)',   '—', costeEmpleado, costeEmpleado, costeEmpleado],
+    ['Cuota corporativa o IRPF',         cuota_pf, cuota_is_micro, total_corp_holding, cuota_is_gen],
+    ['Cuota IRPF dividendos',            0, irpf_div_micro, irpf_div_holding, irpf_div_gen],
+    ['COSTE FISCAL TOTAL (CFT)',         CFT_pf, CFT_micro, CFT_holding, CFT_gen],
+    ['Tipo efectivo',                    CFT_pf/Math.max(1,RN), CFT_micro/Math.max(1,RN), CFT_holding/Math.max(1,RN), CFT_gen/Math.max(1,RN)],
+  ];
+  tbody.innerHTML = '';
+  filas.forEach((fila, idx) => {
+    const tr = document.createElement('tr');
+    const isTotal = fila[0].includes('TOTAL');
+    tr.innerHTML = `
+      <td style="${isTotal ? 'font-weight:700;color:var(--color-primary);' : ''}">${fila[0]}</td>
+      ${fila.slice(1).map(v => {
+        if (typeof v === 'string') return `<td class="num">${v}</td>`;
+        if (idx === filas.length - 1) return `<td class="num" style="${isTotal ? 'font-weight:700;' : ''}">${fmtPct(v)}</td>`;
+        return `<td class="num" style="${isTotal ? 'font-weight:700;color:var(--color-accent);' : ''}">${fmt(v)}</td>`;
+      }).join('')}
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ===== PRESETS =====
+const PRESETS = {
+  default: { rendimientos: 90000, gastos: 18000, ccaa: 2, tipoActividad: 1, vivienda: 0, reinvertir: 0, edad: 45, relevo: 0, bin: 0, socios: 1 },
+  profesional: { rendimientos: 90000, gastos: 18000, ccaa: 2, tipoActividad: 1, vivienda: 0, reinvertir: 1, edad: 38, relevo: 0, bin: 0, socios: 1 },
+  inmobiliario: { rendimientos: 144000, gastos: 32000, ccaa: 1, tipoActividad: 2, vivienda: 1, reinvertir: 0, edad: 52, relevo: 0, bin: 0, socios: 2 },
+  empresa: { rendimientos: 300000, gastos: 50000, ccaa: 1, tipoActividad: 3, vivienda: 0, reinvertir: 1, edad: 68, relevo: 1, bin: 0, socios: 3 },
+  crisis: { rendimientos: 800000, gastos: 150000, ccaa: 2, tipoActividad: 3, vivienda: 0, reinvertir: 0, edad: 55, relevo: 0, bin: 1, socios: 2 }
+};
+
+function loadPreset(name) {
+  const p = PRESETS[name];
+  if (!p) return;
+  for (const [k, v] of Object.entries(p)) {
+    const el = document.getElementById(k);
+    if (el) el.value = v;
+  }
+  calcular();
+}
+
+// ===== TABS =====
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// Cálculo inicial
+calcular();
+</script>
+
+</body>
+</html>
